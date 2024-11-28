@@ -96,8 +96,72 @@ curl http://localhost:8080/performance/database
 
 ---
 
-## Licence
-Ce projet est distribué sous licence MIT. Consultez le fichier `LICENSE` pour plus d'informations.
+L'**AB Test** avec Apache **Bench** (ab) peut être utile pour évaluer les performances de certains des problèmes simulés, mais il a des limitations dans ce contexte spécifique. Voici une analyse de son utilité :
+
+---
+
+### **Cas où `ab` est utile :**
+
+1. **Problème de requêtes lentes (N+1 Problem)**  
+   - **Pourquoi utile** :  
+     Apache Bench permet de générer des charges simulées sur l'endpoint `/performance/database`. Cela permet de vérifier l'impact de requêtes non optimisées sous une charge élevée.  
+   - **Comment tester** :  
+     ```bash
+     ab -n 1000 -c 10 http://localhost:8080/performance/database
+     ```
+     - **-n 1000** : 1000 requêtes totales.  
+     - **-c 10** : 10 requêtes simultanées.  
+
+2. **Problème de cache mal configuré**  
+   - **Pourquoi utile** :  
+     Vous pouvez simuler un nombre important d'appels sur `/performance/cache` pour évaluer comment le cache se dégrade sous une charge.  
+   - **Comment tester** :  
+     ```bash
+     ab -n 500 -c 5 http://localhost:8080/performance/cache
+     ```
+
+3. **Problème d'appels HTTP lents**  
+   - **Pourquoi utile** :  
+     Apache Bench peut reproduire un grand nombre d'appels pour voir comment les temps de réponse s'accumulent à cause des latences réseaux simulées.  
+   - **Comment tester** :  
+     ```bash
+     ab -n 200 -c 5 http://localhost:8080/performance/http
+     ```
+
+---
+
+### **Cas où `ab` est moins utile :**
+
+1. **Problème de fuite mémoire**  
+   - **Pourquoi moins utile** :  
+     Les fuites mémoire ne sont pas directement visibles dans les résultats d'Apache Bench (temps de réponse ou taux d'erreur). Il est préférable d'utiliser un outil comme JProfiler ou VisualVM pour surveiller l'utilisation de la mémoire.  
+
+2. **Problème de synchronisation excessive**  
+   - **Pourquoi moins utile** :  
+     `ab` ne montre pas les problèmes de contention des threads ou des verrous. Ces problèmes sont mieux analysés avec des outils comme JProfiler (section *Thread Locking*).  
+
+3. **Problème de calculs intensifs**  
+   - **Pourquoi moins utile** :  
+     Les calculs CPU intensifs peuvent augmenter le temps de réponse, mais `ab` ne fournit pas de détails sur la charge CPU. JProfiler (ou une commande comme `top`/`htop`) est mieux adapté ici.  
+
+4. **Problème de thread pool sous-dimensionné**  
+   - **Pourquoi moins utile** :  
+     `ab` peut mettre en évidence des temps de réponse plus longs en raison de la saturation du pool de threads, mais il ne fournit pas de détails sur le comportement interne du thread pool. JProfiler est nécessaire pour visualiser la saturation dans la gestion des tâches.  
+
+---
+
+### **Conclusion : AB Test et JProfiler**
+
+- **`ab` est complémentaire** à JProfiler :  
+  - Il est utile pour générer une charge simulée et mesurer les temps de réponse, les erreurs et le débit.  
+  - Les résultats de `ab` peuvent déclencher une analyse plus approfondie dans JProfiler.  
+
+- **Utilisation recommandée** :  
+  1. Lancez un test de charge avec `ab`.  
+  2. Surveillez simultanément avec JProfiler (CPU, mémoire, threads, I/O).  
+  3. Corrélez les résultats pour identifier et comprendre les problèmes de performance.  
+
+Par exemple, pour `/performance/cache`, vous pourriez observer une augmentation de l’utilisation mémoire dans JProfiler pendant le test `ab`.
 
 
 ---
